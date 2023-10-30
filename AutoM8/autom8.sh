@@ -64,6 +64,7 @@ firstExec() {
         wget
         curl
         openssh-server
+        ntpdate
         zfsutils-linux
         gcc
         sshpass
