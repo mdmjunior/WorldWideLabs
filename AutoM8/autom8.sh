@@ -30,7 +30,7 @@ firstExec() {
 
     # Este laço verifica se o arquivo que indica que o autom8 foi instalado existe. 
     echo -e "Verificando instalação existente\n"
-
+    sleep 2;
     if [ -f .autom8install ]; then
         firstLine=$(head -n 1 .autom8install)
         if [ "$firstLine" -eq 1 ]; then
@@ -46,13 +46,14 @@ firstExec() {
 
     RUN_USER=$(whoami)
     echo -e "Usuário atual: $RUN_USER\n"
+    sleep 2
 
     current_hostname=$(hostname)
     echo "O hostname atual é: $current_hostname"
 
     read -p "O hostname está correto? (s/n): " response
 
-    if [ "$response" == "s" ]; then
+    if [[ $response == "s" || $response == "S" ]]; then
         LOCAL_HOSTNAME="$current_hostname"
     else
         read -p "Digite o novo hostname desejado: " new_hostname
@@ -63,9 +64,11 @@ firstExec() {
     current_datetime=$(date +"%Y-%m-%d %H:%M:%S")
     echo -e "A data e hora atual do sistema são: $current_datetime\n"
     read -p "A informação está correta? (s/n): " confirm
-    if [ "$confirm" != "s" ]; then
+    if [[ $confirm != "s" || $confirm != "S" ]]; then
         read -p "Informe o timezone correto: " TIMEZONE
         sudo timedatectl set-timezone "$TIMEZONE"
+        TIMEZN=$(sudo timedatectl | grep Local)
+        echo "Timezone atualizado com sucesso: $TIMEZN"
     fi
     DATE_1stRUN=$(date +"%Y-%m-%d")
     TIME_1stRUN=$(date +"%H:%M:%S")
@@ -77,9 +80,15 @@ firstExec() {
     fi
 
     # Atualização do SO
-    echo "Atualizando os repositórios..."
+    echo "Atualizando os repositórios do sistema operacional"
     sudo apt-get update &> /dev/null
-    echo "Atualizando os pacotes..."
+    sleep 2
+    read -p "Deseja visualizar os pacotes disponiveis para atualização? (s/n): " upgradeask
+    if [[ $upgradeask == "s" || $upgradeask == "S" ]]; then
+        echo -e "Lista de pacotes disponiveis para atualização: \n"
+        sudo apt list --upgradable
+    fi
+    echo "Atualizando os pacotes do sistema operacional"
     sudo apt-get upgrade -y &> /dev/null
 
     # Instalação de pacotes necessários na primeira execução
@@ -93,14 +102,20 @@ firstExec() {
         curl
         ntpdate
         zfsutils-linux
-        gcc
+        openssh-server
         sshpass
         iptables
         netdata
     )
     for package in "${packages[@]}"; do
         echo "Instalando $package..."
-        sudo apt-get install -y "$package" &> /dev/null
+        sudo apt-get install -y "$package" > /dev/null 2>&1 &
+        pid=$!
+        while ps -p $pid > /dev/null; do
+            echo -n "."
+            sleep 1
+        done
+        echo " [OK]"
     done
 
     # Desabilita e remove o UFW
@@ -109,17 +124,26 @@ firstExec() {
     sudo apt-get purge ufw -y &> /dev/null
 
     # Altera o editor padrão para vim
+    echo "Alterando editor padrão para o VIM"
     sudo update-alternatives --set editor /usr/bin/vim.tiny
+
+    # Executa alterações no SSHD para permitir login com chave
+    echo "Alterando SSHD para permitir login com chave"
+    sudo sed -i "s/#PubkeyAuthentication yes/PubkeyAuthentication yes/" /etc/ssh/sshd_config
+    sudo sed -i "s/#AuthorizedKeysFile/AuthorizedKeysFile/" /etc/ssh/sshd_config
+    sudo systemctl restart sshd 
 
     # Gera o arquivo de instalação
     echo "1" > .autom8install
-
+    echo "Primeiros ajustes executado com sucesso"
+    sleep 2
     clear 
   
 }
 
 usersAndGroups() {
     # Verifica se os grupos devops e sysops existem, senão cria
+    echo "Criando grupos no sistema"
     if ! getent group devops &>/dev/null; then
         sudo groupadd devops
     fi
@@ -149,16 +173,13 @@ usersAndGroups() {
         if id "$line" &>/dev/null; then
             echo "O usuário $line já existe."
         else
-            sudo useradd -m -G devops,sysops "$line"
+            sudo useradd -s /bin/bash -m -G devops,sysops "$line"
             echo "$line:$password" | sudo chpasswd
             sudo chage -d 0 $line
             echo -e "Usuário $line criado com sucesso. Verifique o arquivo users.txt\n"
             echo -e "A senha deve ser trocada no primeiro login do usuário\n"
-            if [ -f "config/keys/$username.pub" ]; then
-                 sudo mkdir -p "/home/$username/.ssh"
-                 sudo cat "config/keys/$username.pub" >> "/home/$username/.ssh/authorized_keys"
-                 sudo chown -R "$username:$username" "/home/$username/.ssh"
-            fi
+            sleep 2
+            clear
         fi
 
     done < config/users.txt
