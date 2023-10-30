@@ -87,6 +87,7 @@ firstExec() {
         net-tools
         git
         nmap
+        vim
         tcpdump
         wget
         curl
@@ -95,8 +96,6 @@ firstExec() {
         gcc
         sshpass
         iptables
-        iptables-persistent
-        netfilter-persistent
         netdata
     )
     for package in "${packages[@]}"; do
@@ -110,7 +109,7 @@ firstExec() {
     sudo apt-get purge ufw -y &> /dev/null
 
     # Altera o editor padrão para vim
-    update-alternatives --set editor /usr/bin/vim.tiny
+    sudo update-alternatives --set editor /usr/bin/vim.tiny
 
     # Gera o arquivo de instalação
     echo "1" > .autom8install
@@ -145,25 +144,24 @@ usersAndGroups() {
         fi
 
         password=$(< /dev/urandom tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c10)
-
-        echo "$line:$password" >> AutoM8/config/createdUsers.txt
+        echo "$line - $password" >> config/createdUsers.txt
 
         if id "$line" &>/dev/null; then
             echo "O usuário $line já existe."
         else
             sudo useradd -m -G devops,sysops "$line"
             echo "$line:$password" | sudo chpasswd
-            chage -d 0 $line
+            sudo chage -d 0 $line
             echo -e "Usuário $line criado com sucesso. Verifique o arquivo users.txt\n"
             echo -e "A senha deve ser trocada no primeiro login do usuário\n"
-            if [ -f "AutoM8/config/keys/$username.pub" ]; then
-                 mkdir -p "/home/$username/.ssh"
-                 cat "AutoM8/config/keys/$username.pub" >> "/home/$username/.ssh/authorized_keys"
-                 chown -R "$username:$username" "/home/$username/.ssh"
+            if [ -f "config/keys/$username.pub" ]; then
+                 sudo mkdir -p "/home/$username/.ssh"
+                 sudo cat "config/keys/$username.pub" >> "/home/$username/.ssh/authorized_keys"
+                 sudo chown -R "$username:$username" "/home/$username/.ssh"
             fi
         fi
 
-    done < AutoM8/config/users.txt
+    done < config/users.txt
 }
 
 # Chamada das funções
