@@ -154,8 +154,8 @@ usersAndGroups() {
 
     # Permite que os grupos devops e sysops executem comandos como root sem senha
     if ! sudo grep -qE '^(%devops|%sysops)' /etc/sudoers; then
-        echo '%devops ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers
-        echo '%sysops ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers
+        echo '%devops ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers
+        echo '%sysops ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers
     fi
 
     # Loop para processar cada linha do arquivo users.txt
