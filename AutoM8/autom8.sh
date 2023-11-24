@@ -2,8 +2,7 @@
 
 #############################################################################
 # AutoM8 - Automated Linux Install Tool
-# https://autom8.worldwidelabs.com.br
-# Author         : Marcio Moreira Junior
+# Author         : Marcio Moreira Junior (marcio.moreira@teladapters.com)
 # Date           : 2023/10/29
 # Version        : 1.0    
 #############################################################################
